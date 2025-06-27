@@ -12,16 +12,39 @@ To tackle this problem, I have chosen to start with the YOLO (You Only Look Once
 
 ### Dataset Generation
 
-To train the model, I created a script that generates a custom dataset by combining handwritten digit images from the MNIST dataset. The script places multiple digits in varied positions on a single image, simulating real-world scenarios where digits appear in different locations and orientations. This dataset is designed to train YOLO to detect and classify digits in a multi-object context.
+To train the model, I created a script that generates a custom dataset by combining handwritten digit images from the MNIST dataset. The dataset consists of 500,000 images, each containing multiple digits placed in varied positions to simulate real-world scenarios where digits appear in different locations and orientations.
 
-### Example Image
+#### Dataset Updates
 
-Below is an example of a generated image from the dataset, showing multiple handwritten digits:
+The dataset has been enhanced to increase robustness and simulate more challenging conditions:
+- **Background Noise**: Added random lines behind the digits and various shapes (circles, squares, rectangles) to mimic cluttered backgrounds.
+- **Salt and Pepper Noise**: Introduced Salt and Pepper noise, a type of impulse noise where random pixels in the image are set to either black or white, resembling specks of salt and pepper. This noise simulates scenarios where image binarization (e.g., converting to black-and-white) may fail due to pixel-level distortions, making detection more challenging.
 
-![Example Image](examples/example.png)
+Below is an example of an image with Salt and Pepper noise applied:
+
+![Salt and Pepper Noise Example](examples/saltnpepper.jpg)
+
+##### Data Augmentation
+
+To improve model generalization, I applied specific data augmentations during dataset generation:
+- **Scale**: Adjusted the size of digits to simulate variations in digit size.
+- **Translate**: Shifted digits to different positions within the image to account for positional variability.
+
+Other augmentations (e.g., rotation, shear) were disabled, as they were found to negatively impact digit recognition performance.
+
+#### Example Image
+
+Below is an example of a generated image from the dataset, showing multiple handwritten digits with added background noise:
+
+![Example Image](examples/example.jpg)
+
+### Results
+
+Results are not satisfying, the model trained on 500,000 images badly detect hand-written numbers from my test set:
+
+![Example Image](examples/results.png)
 
 ## Next Steps
 
-- Train a YOLO model on the generated dataset.
-- Evaluate the model's performance in detecting and classifying multiple digits.
-- Experiment with other object detection models using the same dataset to compare results.
+- Decrease YOLO dataset t 200,000 images with added noise and selected augmentations.
+- Evaluate the model's performance in detecting and classifying multiple digits under noisy conditions.
