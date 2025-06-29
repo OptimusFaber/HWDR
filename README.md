@@ -12,7 +12,11 @@ To tackle this problem, I have chosen to start with the YOLO (You Only Look Once
 
 ### Dataset Generation
 
-To train the model, I created a script that generates a custom dataset by combining handwritten digit images from the MNIST dataset. The dataset consists of 500,000 images, each containing multiple digits placed in varied positions to simulate real-world scenarios where digits appear in different locations and orientations.
+To train the model, I created a script that generates a custom dataset by combining handwritten digit images from the MNIST dataset and a new dataset called [Touching Digits Dataset](https://web.inf.ufpr.br/vri/databases/touching-digits/). The MNIST dataset consists of 500,000 images, each containing multiple digits placed in varied positions to simulate real-world scenarios. The Touching Digits dataset, comprising 240,000 images, includes handwritten digits that may overlap or touch, adding complexity to the detection task.
+
+Below is an example from the Touching Digits dataset:
+
+![Touching Digits Example](examples/TouchingDigits.png)
 
 #### Dataset Updates
 
@@ -24,7 +28,7 @@ Below is an example of an image with Salt and Pepper noise applied:
 
 ![Salt and Pepper Noise Example](examples/saltnpepper.jpg)
 
-##### Data Augmentation
+#### Data Augmentation
 
 To improve model generalization, I applied specific data augmentations during dataset generation:
 - **Scale**: Adjusted the size of digits to simulate variations in digit size.
@@ -32,19 +36,28 @@ To improve model generalization, I applied specific data augmentations during da
 
 Other augmentations (e.g., rotation, shear) were disabled, as they were found to negatively impact digit recognition performance.
 
-#### Example Image
+### Example Image
 
-Below is an example of a generated image from the dataset, showing multiple handwritten digits with added background noise:
+Below is an updated example of a generated image from the combined dataset, showing multiple handwritten digits with added background noise:
 
 ![Example Image](examples/example.jpg)
 
+From experiments conducted, it is evident that the model struggles to accurately detect handwritten digits. Specifically:
+- The model consistently fails to detect the digit "1".
+- There is frequent confusion between digits, with the digit "4" often misclassified as "9", and the digit "9" mistaken for "3".
+- The model has increasingly confused the digit "7" with "4", which may indicate overfitting due to the large dataset size.
+
 ### Results
 
-Results are not satisfying, the model trained on 500,000 images badly detect hand-written numbers from my test set:
+The model trained on the combined dataset (500,000 MNIST images + 240,000 Touching Digits images) performs poorly on the test set, as shown below:
 
-![Example Image](examples/results.png)
+![Results Image](examples/results.png)
+
+The poor performance suggests potential overfitting, likely due to the large volume of training data (740,000 images in total).
 
 ## Next Steps
 
-- Decrease YOLO dataset t 200,000 images with added noise and selected augmentations.
+- Reduce the dataset size to 20,000–40,000 images to mitigate overfitting and improve model generalization.
+- Retrain the YOLO model on the smaller dataset with added noise and selected augmentations.
 - Evaluate the model's performance in detecting and classifying multiple digits under noisy conditions.
+- Experiment with other object detection models (e.g., Faster R-CNN, SSD) using the reduced dataset to compare results.
