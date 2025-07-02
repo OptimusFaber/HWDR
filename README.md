@@ -25,7 +25,7 @@ Due to these limitations, MNIST was replaced with a more robust dataset: [Handwr
 
 ### Dataset Generation
 
-A new dataset of 20,000 images was created by combining the [Handwritten Digits Dataset (Not in MNIST)](https://www.kaggle.com/datasets/jcprogjava/handwritten-digits-dataset-not-in-mnist) with the [Touching Digits Dataset](https://web.inf.ufpr.br/vri/databases/touching-digits/). A script was developed to overlay digits from both datasets onto images, simulating complex scenes with multiple digits. 
+A new dataset of 20,000 images was created by combining the [Handwritten Digits Dataset (Not in MNIST)](https://www.kaggle.com/datasets/jcprogjava/handwritten-digits-dataset-not-in-mnist) with the [Touching Digits Dataset](https://web.inf.ufpr.br/vri/databases/touching-digits/). A script was developed to overlay digits from both datasets onto images, simulating complex scenes with multiple digits. Additionally, a separate handwritten digits dataset was used to introduce background noise, as I noticed that without this, the model was overly sensitive to non-digit elements (e.g., random shapes or patterns). Letters were not labeled as a separate class.
 
 Below is an example from the Touching Digits dataset:
 
@@ -41,17 +41,34 @@ wget https://github.com/JC-ProgJava/Handwritten-Digit-Dataset/releases/download/
 unzip dataset.zip -d handwritten_digits_dataset
 ```
 
-### Updated Results
+### Model Development
 
-Training was conducted on the new dataset of 20,000 images for 15 epochs. The model shows improved digit recognition compared to previous experiments. However, a new issue has emerged: the model tends to classify non-digit objects as digits, leading to false positives. The results are shown below:
+Two models were prepared to address the digit detection task: one for object detection and another for segmentation.
 
-![Results Image-1](examples/result-1.png)
+#### Detection Model
 
-![Results Image-2](examples/result-2.png)
+The detection model, trained on the combined dataset of 20,000 images, shows reduced sensitivity to background noise compared to previous iterations. However, new issues have emerged:
+- The model struggles to distinguish between digits, often failing to recognize them correctly.
+- In some cases, the model fails to detect digits entirely.
+
+Below are examples illustrating these issues:
+
+![Detection Result 1](examples/result-1.png)
+![Detection Result 2](examples/result-2.png)
+
+#### Segmentation Model
+
+A segmentation model was also trained to explore an alternative approach. This model demonstrates improved robustness to background noise but faces significant challenges:
+- The model frequently fails to detect digits.
+- Training is unstable, with performance fluctuating between epochs. For example, comparing results at 17 and 33 epochs shows inconsistent scores, indicating that the model struggles to converge.
+
+Below is an example of the segmentation model's output:
+
+![Segmentation Result](examples/result-3.png)
 
 ## Next Steps
 
-- Address the issue of false positives by refining the dataset or adjusting the model’s classification thresholds.
+- Address false positives and digit recognition issues in the detection model by refining the dataset or adjusting classification thresholds.
+- Investigate the segmentation model’s instability, potentially by experimenting with different learning rates or regularization techniques.
 - Experiment with different augmentation strategies to identify which ones improve performance without degrading results.
-- Investigate techniques to stabilize training and prevent the model from "forgetting" digits on later epochs.
-- Test alternative object detection models (e.g., Faster R-CNN, SSD) to compare performance with YOLO.
+- Test alternative object detection and segmentation models (e.g., Faster R-CNN, SSD, or U-Net) to compare performance with the current YOLO-based approach.

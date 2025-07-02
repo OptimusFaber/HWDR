@@ -10,6 +10,85 @@ from collections import defaultdict
 # Disable all warnings
 warnings.filterwarnings('ignore')
 
+class TouchingDigitsLoader:
+    def __init__(self, dataset_path):
+        self.dataset_path = Path(dataset_path)
+        self.numbers = []
+        self.labels = []
+        self.usage_count = defaultdict(int)
+        
+        # Load all numbers from dataset
+        print("Loading numbers from SyntheticDigitStrings...")
+        number_dirs = list(self.dataset_path.iterdir())
+        for number_dir in tqdm(number_dirs, desc="Loading directories"):
+            if not number_dir.is_dir():
+                continue
+                
+            number = number_dir.name
+            txt_files = list(number_dir.glob('*.txt'))
+            if not txt_files:
+                continue
+                
+            # Take only one file from each directory to speed up
+            txt_file = random.choice(txt_files)
+            with open(txt_file, 'r') as f:
+                lines = f.readlines()
+                if len(lines) < 2:  # Skip files without markup
+                    continue
+                
+                # Get image
+                img_path = txt_file.with_suffix('.png')
+                if not img_path.exists():
+                    continue
+                    
+                img = cv2.imread(str(img_path), cv2.IMREAD_UNCHANGED)
+                if img is None:
+                    continue
+                
+                # Convert image to grayscale
+                if len(img.shape) == 3:
+                    if img.shape[2] == 4:  # RGBA
+                        alpha = img[:, :, 3]
+                        digit = np.ones_like(alpha) * 255
+                        digit[alpha > 0] = 0
+                    else:  # RGB
+                        digit = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                else:  # Already in grayscale
+                    digit = img
+                
+                # Parse markup
+                boxes = []
+                for line in lines[2:]:  # Skip first two lines
+                    parts = line.strip().split('|')
+                    if len(parts) != 4:
+                        continue
+                    class_id = int(parts[0])
+                    coords = parts[1].split(',') + parts[2].split(',')
+                    boxes.append([int(x) for x in coords] + [class_id])
+                
+                self.numbers.append((digit, boxes, number))
+                self.labels.append(number)
+        
+        if not self.numbers:
+            raise ValueError(f"No numbers found in {dataset_path}")
+        
+        print(f"Loaded {len(self.numbers)} numbers from SyntheticDigitStrings")
+    
+    def get_number(self):
+        """Get a random number from the dataset"""
+        if not self.numbers:
+            return None
+            
+        # Choose the number that was used the least
+        idx = min(range(len(self.numbers)), key=lambda x: self.usage_count[x])
+        self.usage_count[idx] += 1
+        
+        # Reset counters if all numbers were used too many times
+        if min(self.usage_count.values()) > 20:
+            self.usage_count.clear()
+            
+        return self.numbers[idx]
+
 def calculate_iou(box1, box2):
     """Calculate IoU between two boxes [x1, y1, x2, y2]"""
     x1 = max(box1[0], box2[0])
@@ -27,10 +106,20 @@ def calculate_iou(box1, box2):
     
     return intersection / union
 
-def is_valid_overlap(box1, box2):
+def is_valid_overlap(box1, box2, max_iou=0.15):
     """Check if the overlap between two boxes is valid"""
     iou = calculate_iou(box1, box2)
-    return iou < 0.05  # Allow overlap of no more than 5%
+    return iou < max_iou
+
+def check_alignment(boxes, tolerance=5):
+    """Check that all digits are on the same line"""
+    if not boxes:
+        return True
+    # Take the middle line of each bounding box
+    mid_lines = [(box[1] + box[3]) / 2 for box in boxes]
+    # Check that all middle lines are within tolerance from the first one
+    reference = mid_lines[0]
+    return all(abs(mid - reference) <= tolerance for mid in mid_lines)
 
 def add_noise_and_lines(image, boxes, probability=1.0):
     """Add random noise and lines that intersect with digits from below"""
@@ -120,16 +209,16 @@ class DigitSelector:
                     # Load image with alpha channel
                     img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
                     if img is not None:
-                        # If the image has an alpha channel (4 channels)
+                        # If image has alpha channel (4 channels)
                         if img.shape[-1] == 4:
-                            # Take only the alpha channel
+                            # Take only alpha channel
                             alpha = img[:, :, 3]
-                            # Create a white image
+                            # Create white image
                             digit = np.ones_like(alpha) * 255
                             # Where alpha > 0, set to 0 (black)
                             digit[alpha > 0] = 0
                         else:
-                            # If there is no alpha channel, use as is
+                            # If no alpha channel, use as is
                             digit = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                         
                         self.digits.append(digit)
@@ -152,7 +241,7 @@ class DigitSelector:
                     self.usage_count[idx] = 0
                 available_indices = self.class_indices[class_id]
         else:
-            # Choose a random digit class
+            # Select a random digit class
             available_classes = list(range(10))
             random.shuffle(available_classes)
             for class_id in available_classes:
@@ -171,15 +260,89 @@ class DigitSelector:
         self.usage_count[idx] += 1
         return self.digits[idx], self.labels[idx]
 
-def generate_multi_digit_image(digit_selector, target_size=416, min_digits=5, max_digits=8, max_attempts=20):
-    """Generate an image with 5-8 digits placed in a row with correct overlap"""
+def generate_multi_digit_image(digit_selector, touching_loader, target_size=416, min_digits=5, max_digits=8, max_attempts=50):
+    """Generate an image with digits, possibly including numbers from the touching digits dataset"""
     for attempt in range(max_attempts):
         image = np.ones((target_size, target_size), dtype=np.uint8) * 255
         boxes = []  # [x1, y1, x2, y2, class_id]
         base_height = int(target_size * 0.12)
+        
+        # With 25% probability, use a number from the touching digits dataset
+        use_touching = random.random() < 0.25
+        if use_touching and touching_loader:
+            touching_number = touching_loader.get_number()
+            if touching_number:
+                digit_img, digit_boxes, number = touching_number
+                # Scale image to height
+                scale = base_height / digit_img.shape[0]
+                new_width = int(digit_img.shape[1] * scale)
+                resized_digit = cv2.resize(digit_img, (new_width, base_height))
+                
+                # Place in the center
+                start_x = (target_size - new_width) // 2
+                start_y = (target_size - base_height) // 2
+                
+                # Place image
+                roi = image[start_y:start_y + base_height, start_x:start_x + new_width]
+                mask = resized_digit < 255
+                roi[mask] = resized_digit[mask]
+                
+                # Update bounding box coordinates
+                main_boxes = []
+                for box in digit_boxes:
+                    x1, y1, x2, y2, class_id = box
+                    # Scale coordinates
+                    x1 = int(x1 * scale) + start_x
+                    y1 = int(y1 * scale) + start_y
+                    x2 = int(x2 * scale) + start_x
+                    y2 = int(y2 * scale) + start_y
+                    main_boxes.append([x1, y1, x2, y2, class_id])
+                boxes.extend(main_boxes)
+                
+                # Add 2-4 random digits, not overlapping with main_boxes or between each other
+                num_additional = random.randint(2, 4)
+                added = 0
+                tries = 0
+                max_tries = 20 * num_additional
+                while added < num_additional and tries < max_tries:
+                    digit, label = digit_selector.get_digit()
+                    aspect_ratio = digit.shape[1] / digit.shape[0]
+                    width = int(base_height * aspect_ratio)
+                    x = random.randint(0, target_size - width)
+                    y = start_y  # Use the same height as for the main number
+                    resized_digit = cv2.resize(digit, (width, base_height))
+                    roi = image[y:y + base_height, x:x + width]
+                    mask = resized_digit < 255
+                    # Get bounding box
+                    box = get_bounding_box(resized_digit)
+                    if box is not None:
+                        box[0] += x
+                        box[2] += x
+                        box[1] += y
+                        box[3] += y
+                        # Check for intersection with main_boxes (very strictly, <1%)
+                        if any(not is_valid_overlap(box, main_box, max_iou=0.01) for main_box in main_boxes):
+                            tries += 1
+                            continue
+                        # Check for intersection with already added single digits
+                        if any(not is_valid_overlap(box, existing_box, max_iou=0.01) for existing_box in boxes):
+                            tries += 1
+                            continue
+                        # If everything is fine, place
+                        roi[mask] = resized_digit[mask]
+                        boxes.append(box + [label])
+                        added += 1
+                    tries += 1
+                # Check alignment
+                if not check_alignment(boxes):
+                    continue
+                return image, boxes
+        
+        # If we don't use touching digits or couldn't load a number,
+        # generate a regular image
         num_digits = random.randint(min_digits, max_digits)
         
-        # First, gather information about all digits
+        # First, collect information about all digits
         digit_info = []
         total_width = 0
         for _ in range(num_digits):
@@ -197,7 +360,7 @@ def generate_multi_digit_image(digit_selector, target_size=416, min_digits=5, ma
         if total_width > target_size * 0.9:  # Leave 10% margin
             continue
         
-        # Center horizontally
+        # Center horizontally and vertically
         start_x = (target_size - total_width) // 2
         start_y = (target_size - base_height) // 2
         
@@ -208,10 +371,10 @@ def generate_multi_digit_image(digit_selector, target_size=416, min_digits=5, ma
             positions.append((current_x, width, height, digit, label))
             current_x += width + spacing
         
-        # Now add overlap for some pairs of digits
+        # Now add overlap for some digit pairs
         for i in range(len(positions) - 1):
-            if random.random() < 0.9:  # Increase chance of overlap to 90%
-                # Randomly choose the degree of overlap
+            if random.random() < 0.9:  # Increase overlap chance to 90%
+                # Randomly select overlap degree
                 overlap_type = random.random()
                 if overlap_type < 0.3:  # 30% chance of strong overlap
                     overlap = int(positions[i+1][1] * 0.5)  # 50% overlap
@@ -225,18 +388,19 @@ def generate_multi_digit_image(digit_selector, target_size=416, min_digits=5, ma
                     x, w, h, d, l = positions[j]
                     positions[j] = (x - overlap, w, h, d, l)
         
-        # Place digits on the image
+        # Place digits on image
+        temp_boxes = []  # Temporary list for checking intersections
         for x, width, height, digit, label in positions:
-            # Check if the digit goes out of bounds
+            # Check if digit goes out of bounds
             if x + width > target_size:
                 continue
                 
-            # Place the digit while preserving existing pixels
+            # Place digit while preserving existing pixels
             resized_digit = cv2.resize(digit, (width, height))
             roi = image[start_y:start_y + height, x:x + width]
-            # Create a mask for digit pixels (not white)
+            # Create mask for digit pixels (not white)
             mask = resized_digit < 255
-            # Update only those pixels where the background is white or where there are digit pixels
+            # Update only pixels where background is white or there are digit pixels
             roi[mask] = resized_digit[mask]
             
             # Get bounding box
@@ -247,18 +411,25 @@ def generate_multi_digit_image(digit_selector, target_size=416, min_digits=5, ma
                 box[2] += x
                 box[1] += start_y
                 box[3] += start_y
-                boxes.append(box + [label])
+                
+                # Check for intersection with existing bounding boxes
+                if any(not is_valid_overlap(box, existing_box) for existing_box in temp_boxes):
+                    continue
+                    
+                temp_boxes.append(box + [label])
         
-        if len(boxes) == num_digits:
+        # Check alignment and number of digits
+        if len(temp_boxes) == num_digits and check_alignment(temp_boxes):
+            boxes = temp_boxes
             print(f"Successfully placed {len(boxes)} digits")
             return image, boxes
             
-    print("Failed to place all digits correctly after several attempts")
+    print("Failed to place all digits correctly after multiple attempts")
     return image, boxes
 
 def main():
     # Create output directories
-    output_dir = Path("Datasets/Synthetic-Digits")
+    output_dir = Path("/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/yolo-dataset-v6")
     images_dir = output_dir / "images"
     labels_dir = output_dir / "labels"
     
@@ -269,12 +440,16 @@ def main():
     dataset_path = "Datasets/Single-Digits/dataset"
     digit_selector = DigitSelector(dataset_path)
     
+    # Initialize touching digits loader
+    touching_path = "Datasets/Touching-Digits/SyntheticDigitStrings"
+    touching_loader = TouchingDigitsLoader(touching_path)
+    
     # Generate images
-    num_images = 20000  # Reduce the number of images for testing
+    num_images = 20000  # Reduce number of images for testing
     for i in tqdm(range(num_images)):
-        image, boxes = generate_multi_digit_image(digit_selector)
+        image, boxes = generate_multi_digit_image(digit_selector, touching_loader)
         
-        # Invert the image before adding noise and lines
+        # Invert image before adding noise and lines
         image = 255 - image
         
         # Add noise and lines to the final image
