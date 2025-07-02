@@ -25,6 +25,10 @@ Due to these limitations, MNIST was replaced with a more robust dataset: [Handwr
 
 ### Dataset Generation
 
+Here is a view on one frame from new dataset:
+
+![New Dataset Example](examples/dataset.jpg)
+
 A new dataset of 20,000 images was created by combining the [Handwritten Digits Dataset (Not in MNIST)](https://www.kaggle.com/datasets/jcprogjava/handwritten-digits-dataset-not-in-mnist) with the [Touching Digits Dataset](https://web.inf.ufpr.br/vri/databases/touching-digits/). A script was developed to overlay digits from both datasets onto images, simulating complex scenes with multiple digits. Additionally, a separate handwritten digits dataset was used to introduce background noise, as I noticed that without this, the model was overly sensitive to non-digit elements (e.g., random shapes or patterns). Letters were not labeled as a separate class.
 
 Below is an example from the Touching Digits dataset:
