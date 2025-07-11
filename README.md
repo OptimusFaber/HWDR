@@ -15,31 +15,33 @@ During the development and training process, several issues were identified:
 
 ## Actions Taken
 
-### Dataset Transition
+### Datasets Used
+
 
 Initially, the MNIST dataset was used to generate synthetic images for training. However, MNIST has significant limitations, as outlined in this article: [Why MNIST is the Worst Thing That Has Ever Happened to Humanity](https://matteo-a-barbieri.medium.com/why-mnist-is-the-worst-thing-that-has-ever-happened-to-humanity-49fd053f0f66). Below is an example of an MNIST-based image, highlighting its simplistic and unrealistic nature:
 
 ![MNIST Example](examples/mnist.jpg)
 
-Due to these limitations, MNIST was replaced with a more robust dataset: [Handwritten Digits Dataset (Not in MNIST)](https://www.kaggle.com/datasets/jcprogjava/handwritten-digits-dataset-not-in-mnist), available for download at [GitHub - Handwritten-Digit-Dataset v1.2.0](https://github.com/JC-ProgJava/Handwritten-Digit-Dataset/releases/tag/v1.2.0) in the `dataset.zip` file.
+To create a robust dataset for training, the following datasets were utilized:
+- **[Handwritten Digits Dataset (Not in MNIST)](https://www.kaggle.com/datasets/jcprogjava/handwritten-digits-dataset-not-in-mnist)**: A dataset of handwritten digits, available for download at [GitHub - Handwritten-Digit-Dataset v1.2.0](https://github.com/JC-ProgJava/Handwritten-Digit-Dataset/releases/tag/v1.2.0) in the `dataset.zip` file.
 
-### Dataset Generation
+![Single Digit Example](examples/NotInMnist.png)
 
-A dataset of 20,000 images was created by combining the [Handwritten Digits Dataset (Not in MNIST)](https://www.kaggle.com/datasets/jcprogjava/handwritten-digits-dataset-not-in-mnist) with the [Touching Digits Dataset](https://web.inf.ufpr.br/vri/databases/touching-digits/). A script was developed to overlay digits from both datasets onto images, simulating complex scenes with multiple digits. Additionally, a separate handwritten digits dataset was used to introduce background noise, as I noticed that without this, the model was overly sensitive to non-digit elements (e.g., random shapes or patterns). Letters were not labeled as a separate class.
-
-Below is an example from the Touching Digits dataset:
+- **[Touching Digits Dataset](https://web.inf.ufpr.br/vri/databases/touching-digits/)**: A dataset containing handwritten digits that may overlap or touch, simulating complex detection scenarios.
 
 ![Touching Digits Example](examples/TouchingDigits.png)
 
-To download and use the Handwritten Digits Dataset (Not in MNIST), you can follow these steps:
+- **[English Handwritten Characters Dataset](https://www.kaggle.com/datasets/dhruvildave/english-handwritten-characters-dataset?select=english.csv)**: A dataset of handwritten digits and letters, used to introduce realistic background noise and character variations.
 
-```bash
-# Download the dataset from GitHub
-wget https://github.com/JC-ProgJava/Handwritten-Digit-Dataset/releases/download/v1.2.0/dataset.zip
+![English HandwrittenCharacters Example](examples/HandwrittenCharacters.png)
 
-# Unzip the dataset
-unzip dataset.zip -d handwritten_digits_dataset
-```
+### Dataset Generation
+
+A dataset of 16,000 images was created by combining the above datasets. A script was developed to overlay digits and letters from these datasets onto images, simulating complex scenes with multiple characters. To improve robustness, a separate handwritten characters dataset was used to introduce background noise, as I noticed that without this, the model was overly sensitive to non-digit elements (e.g., random shapes or patterns). Letters were not labeled as a separate class.
+
+The example of dataset frame:
+
+![Dataset Image Example](examples/dataset.jpg)
 
 #### Initial Binary Dataset
 
@@ -47,14 +49,14 @@ The first version of the dataset was binary, where images were converted to blac
 
 #### Transition to Color Dataset
 
-To address the limitations of the binary dataset, I transitioned to a color dataset. In this updated dataset, the background is generated to resemble the texture and appearance of a paper sheet, incorporating realistic elements like faint lines, creases, or slight color variations. The digits themselves are rendered in various colors to mimic real-world writing instruments (e.g., pens or markers). This approach offers several advantages:
+To address the limitations of the binary dataset, I transitioned to a color dataset. The background is generated to resemble the texture and appearance of a paper sheet, incorporating realistic elements like faint lines, creases, or slight color variations. The digits and letters are rendered in various colors and styles to mimic real-world writing instruments (e.g., pens or markers with different stroke widths and forms). This approach offers several advantages:
 - **Improved Realism**: The paper-like background better simulates real-world conditions, making the model more robust to variations in lighting, texture, and noise.
-- **Enhanced Digit Representation**: Colored digits preserve more visual information, such as stroke intensity and slight variations in hue, which help the model distinguish between similar digits.
-- **Better Generalization**: By training on color images with realistic backgrounds, the model is less likely to overfit to simplistic or artificial patterns, improving its performance on diverse test sets.
+- **Enhanced Character Representation**: Colored digits and letters preserve more visual information, such as stroke intensity and slight variations in hue, which help the model distinguish between similar characters.
+- **Better Generalization**: Training on color images with realistic backgrounds reduces overfitting to simplistic or artificial patterns, improving performance on diverse test sets.
 
-Below is an example of an image from the color dataset, showcasing the paper-like background and colored digits:
+Below is an example of an image from the color dataset, showcasing the paper-like background and digits/letters rendered to imitate pen writing:
 
-![Color Dataset Example](examples/color_dataset_example.png)
+![Pen Imitation Example](examples/pen_imitation.jpg)
 
 ### Model Development
 
@@ -66,7 +68,7 @@ The detection model, trained on the combined dataset of 20,000 images, shows red
 - The model struggles to distinguish between digits, often failing to recognize them correctly.
 - In some cases, the model fails to detect digits entirely.
 
-Below are examples illustrating these issues:
+Below is an example illustrating these issues:
 
 ![Detection Result](examples/detection.png)
 
@@ -81,11 +83,11 @@ Below is an example of the segmentation model's output:
 ![Segmentation Result](examples/segmentation.png)
 
 ### Updated Results with Color Dataset
-The transition to the color dataset has yielded mixed results. In some cases, the detection model, trained on the new color dataset with realistic paper-like backgrounds and colored digits, performs better, showing improved robustness to non-digit elements. However, the overall performance remains underwhelming, with persistent challenges in digit recognition, particularly in distinguishing similar digits (e.g., the digit "1" is still frequently undetected, and confusions between "4" and "9" persist). The segmentation model exhibits similar issues, with enhanced resistance to background noise but poor digit detection and unstable training. Notably, the segmentation model often mistakes quotation marks for digits, assigning them classes such as "1" or "4". This suggests that the current dataset labeling, particularly the thin edges of segmentation masks, may be contributing to these errors. Improving accuracy likely requires revising the dataset annotation process to create more robust and precise masks.
+
+The transition to the color dataset with pen-imitated digits and letters has shown limited improvement. While the detection model benefits slightly from the realistic backgrounds and varied character styles, the overall performance remains unsatisfactory. The model continues to struggle with digit recognition, particularly failing to detect the digit "1" and confusing "4" with "9". The segmentation model shows improved noise resistance but often mistakes quotation marks or letters for digits, assigning them classes like "1" or "4". This may be due to thin segmentation masks, suggesting that more robust dataset annotation is needed. Unfortunately, the results for both models are still not promising, indicating that further refinements are required.
 
 ## Next Steps
 
-- Refine the color dataset to further reduce false positives and improve digit recognition accuracy.
+- Refine the color dataset annotation process to create more precise and robust segmentation masks, addressing issues with thin mask edges.
 - Experiment with targeted augmentations (e.g., color jitter, subtle rotations) to enhance model generalization without degrading performance.
 - Address training instability in the segmentation model, potentially by adjusting learning rates, adding regularization, or using techniques like learning rate scheduling.
-- Test alternative object detection and segmentation models (e.g., Faster R-CNN, SSD, or U-Net) to compare performance with the current YOLO-based approach.
