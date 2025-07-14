@@ -8,124 +8,115 @@ import warnings
 from collections import defaultdict
 from scipy.ndimage import gaussian_filter
 
-# Отключаем все предупреждения
+# Disable all warnings
 warnings.filterwarnings('ignore')
 
 def create_paper_texture(size, noise_intensity=0.1):
-    """Создает текстуру бумаги с различными оттенками белого"""
-    # Создаем базовый светлый фон (слегка кремовый оттенок)
-    base_color = np.random.uniform(0.92, 0.98)  # Базовый оттенок белого
+    """Creates paper texture with various shades of white"""
+    # Create base light background (slightly cream tint)
+    base_color = np.random.uniform(0.92, 0.98)  # Base white shade
     texture = np.ones((*size, 3), dtype=np.float32) * base_color
     
-    # Добавляем легкий оттенок желтого/кремового
-    yellow_tint = np.random.uniform(0, 0.02)  # Очень легкий желтый оттенок
-    texture[:, :, 0] *= (1.0 - yellow_tint)  # Немного уменьшаем синий канал
-    texture[:, :, 1] *= (1.0 - yellow_tint * 0.5)  # Чуть меньше уменьшаем зеленый
+    # Add slight yellow/cream tint
+    yellow_tint = np.random.uniform(0, 0.02)  # Very light yellow tint
+    texture[:, :, 0] *= (1.0 - yellow_tint)  # Slightly decrease blue channel
+    texture[:, :, 1] *= (1.0 - yellow_tint * 0.5)  # Decrease green channel a bit less
     
-    # Добавляем текстуру бумаги (мелкие неровности)
+    # Add paper texture (fine irregularities)
     fine_noise = np.random.randn(*size) * noise_intensity * 0.5
     fine_noise = gaussian_filter(fine_noise, sigma=0.5)
     fine_noise = fine_noise[:, :, np.newaxis]
     
-    # Добавляем более крупные неровности
+    # Add larger irregularities
     coarse_noise = np.random.randn(*size) * noise_intensity
     coarse_noise = gaussian_filter(coarse_noise, sigma=2.0)
     coarse_noise = coarse_noise[:, :, np.newaxis]
     
-    # Комбинируем шумы
+    # Combine noises
     combined_noise = (fine_noise + coarse_noise) * 0.5
     texture += np.repeat(combined_noise, 3, axis=2)
     
-    # Добавляем легкие вертикальные или горизонтальные полосы (имитация структуры бумаги)
-    if random.random() < 0.5:  # 50% шанс на вертикальные полосы
+    # Add light vertical or horizontal stripes (imitating paper structure)
+    if random.random() < 0.5:  # 50% chance for vertical stripes
         stripe_noise = np.random.randn(1, size[1]) * noise_intensity * 0.3
         stripe_noise = np.repeat(stripe_noise, size[0], axis=0)
-    else:  # горизонтальные полосы
+    else:  # horizontal stripes
         stripe_noise = np.random.randn(size[0], 1) * noise_intensity * 0.3
         stripe_noise = np.repeat(stripe_noise, size[1], axis=1)
     stripe_noise = gaussian_filter(stripe_noise, sigma=3.0)
     texture += np.dstack([stripe_noise, stripe_noise, stripe_noise])
     
-    # Нормализуем значения и конвертируем в uint8
+    # Normalize values and convert to uint8
     texture = np.clip(texture * 255, 192, 255).astype(np.uint8)
     
     return texture
 
 def generate_random_color():
-    """Генерирует случайный цвет для ручки в формате BGR"""
-    # Создаем разные оттенки путем варьирования всех компонентов
+    """Generates a random color for the pen in BGR format"""
+    # Create different shades by varying all components
     variations = [
-        # Темно-синий
-        lambda: np.array([180, 20, 5]),
-        # Ярко-синий
-        lambda: np.array([255, 30, 10]),
-        # Голубой
-        # lambda: np.array([255, 140, 50]),
-        # Синий с фиолетовым оттенком
-        lambda: np.array([200, 30, 50]),
-        # Морской синий
-        lambda: np.array([220, 120, 30]),
-        # Кобальтовый синий
-        lambda: np.array([230, 50, 20]),
-        # Индиго
-        lambda: np.array([190, 40, 60]),
-        # Сапфировый
-        lambda: np.array([210, 90, 40]),
-        # Ультрамарин
-        lambda: np.array([250, 10, 5]),
-        # Синяя пыль
-        lambda: np.array([147, 62, 66]),
-        # Крайола
-        lambda: np.array([177, 102, 115]),
-        # Глубокий фиолетовый
-        lambda: np.array([148, 64, 67]),
+        lambda: np.array([180, 20, 5]),     # Blue
+        lambda: np.array([107, 46, 9]),     # Dark Blue #1
+        lambda: np.array([82, 33, 4]),      # Dark Blue #2
+        lambda: np.array([33, 13, 0]),      # Black
+        # lambda: np.array([255, 30, 10]),    # Bright Blue
+        # lambda: np.array([255, 140, 50]),   # Cyan
+        lambda: np.array([200, 30, 50]),     # Blue with purple
+        # lambda: np.array([220, 120, 30]),    # Marine Blue
+        lambda: np.array([230, 50, 20]),     # Cobalt Blue
+        lambda: np.array([190, 40, 60]),     # Indigo
+        # lambda: np.array([210, 90, 40]),     # Sapphire
+        lambda: np.array([250, 10, 5]),      # Ultramarine
+        lambda: np.array([147, 62, 66]),     # Blue dust
+        lambda: np.array([177, 102, 115]),   # Crimson
+        lambda: np.array([148, 64, 67]),     # Deep Purple
     ]
     
-    # Выбираем базовый цвет
+    # Select base color
     base_color = variations[np.random.randint(0, len(variations))]()
     
-    # Добавляем небольшую случайность для вариативности
+    # Add a small random variation for variety
     noise = np.random.uniform(-20, 20, 3)
     color = np.clip(base_color + noise, 0, 255)
     
     return color / 255.0
 
 def apply_pen_effect_classic_blue(digit_image, color=None):
-    """Классический синий цвет ручки - тонкие четкие линии"""
+    """Classic blue pen effect - thin precise lines"""
     if color is None:
-        color = np.array([200, 20, 0]) / 255.0  # Дефолтный цвет
+        color = np.array([200, 20, 0]) / 255.0  # Default color
     else:
         color = color / 255.0 if color.max() > 1 else color
         
-    # Уменьшаем толщину линий с помощью эрозии
+    # Reduce line thickness using erosion
     kernel = np.ones((2, 2), np.uint8)
     digit_eroded = cv2.erode(digit_image, kernel, iterations=1)
-    digit_eroded = digit_image
+    # digit_eroded = digit_image
     
     digit_mask = (digit_eroded == 0).astype(np.float32)
     
-    # Делаем линии тоньше
+    # Make lines thinner
     digit_mask = gaussian_filter(digit_mask, sigma=0.2)
     digit_mask = np.power(digit_mask, 2.0)
     
-    # Минимальная текстура для классической ручки
+    # Minimum texture for classic pen
     stroke_texture = gaussian_filter(np.random.randn(*digit_mask.shape) * 0.01, sigma=0.2)
     digit_mask += (digit_mask > 0.1) * stroke_texture
     
-    # Создаем градиентную маску краев с несколькими уровнями размытия
+    # Create edge gradient mask with multiple blur levels
     edge_mask1 = gaussian_filter(digit_mask, sigma=0.5)
     edge_mask2 = gaussian_filter(digit_mask, sigma=1.0)
     edge_mask3 = gaussian_filter(digit_mask, sigma=2.0)
     
-    # Комбинируем маски для создания градиентного перехода
+    # Combine masks to create a gradient transition
     edge_gradient = (edge_mask1 - edge_mask2) * 0.6 + (edge_mask2 - edge_mask3) * 0.4
-    edge_gradient = np.clip(edge_gradient * 2.0, 0, 1)  # Усиливаем эффект
+    edge_gradient = np.clip(edge_gradient * 2.0, 0, 1)  # Strengthen effect
     
-    # Применяем градиентную прозрачность
+    # Apply gradient transparency
     alpha = digit_mask * (1.0 - edge_gradient)
     alpha = np.clip(alpha, 0, 1)
     
-    # Дополнительно усиливаем контраст в центре линий
+    # Further enhance contrast in the center of lines
     alpha = np.where(alpha > 0.5, alpha * 1.2, alpha * 0.8)
     alpha = np.clip(alpha, 0, 1)
     
@@ -136,32 +127,32 @@ def apply_pen_effect_classic_blue(digit_image, color=None):
     return (result * 255).astype(np.uint8)
 
 def apply_pen_effect_gel(digit_image, color=None):
-    """Эффект гелевой ручки - гладкие линии с сильным блеском"""
+    """Gel pen effect - smooth lines with strong shine"""
     if color is None:
-        color = np.array([255, 20, 5]) / 255.0  # Дефолтный цвет
+        color = np.array([255, 20, 5]) / 255.0  # Default color
     else:
         color = color / 255.0 if color.max() > 1 else color
         
     digit_mask = (digit_image == 0).astype(np.float32)
     
-    # Делаем линии тоньше, но с плавными краями
+    # Make lines thinner, but with smooth edges
     digit_mask = gaussian_filter(digit_mask, sigma=0.3)
     digit_mask = np.power(digit_mask, 1.8)
     
-    # Создаем градиентную маску краев с несколькими уровнями размытия
+    # Create edge gradient mask with multiple blur levels
     edge_mask1 = gaussian_filter(digit_mask, sigma=0.3)
     edge_mask2 = gaussian_filter(digit_mask, sigma=0.8)
     edge_mask3 = gaussian_filter(digit_mask, sigma=1.5)
     
-    # Комбинируем маски для создания градиентного перехода
+    # Combine masks to create a gradient transition
     edge_gradient = (edge_mask1 - edge_mask2) * 0.7 + (edge_mask2 - edge_mask3) * 0.3
-    edge_gradient = np.clip(edge_gradient * 2.5, 0, 1)  # Усиливаем эффект
+    edge_gradient = np.clip(edge_gradient * 2.5, 0, 1)  # Strengthen effect
     
-    # Применяем градиентную прозрачность с сохранением яркости в центре
+    # Apply gradient transparency while preserving brightness in the center
     alpha = digit_mask * (1.0 - edge_gradient * 0.8)
     alpha = np.clip(alpha, 0, 1)
     
-    # Усиливаем контраст в центре для более яркого эффекта
+    # Further enhance contrast in the center for a brighter effect
     alpha = np.where(alpha > 0.6, alpha * 1.3, alpha * 0.7)
     alpha = np.clip(alpha, 0, 1)
     
@@ -169,7 +160,7 @@ def apply_pen_effect_gel(digit_image, color=None):
     for i in range(3):
         result[:, :, i] = 1.0 - alpha * (1.0 - color[i])
     
-    # Добавляем блики с учетом новой маски прозрачности
+    # Add gloss effects considering the new transparency mask
     gloss_mask = (alpha > 0.7) * (np.random.rand(*digit_mask.shape) < 0.03)
     gloss = gaussian_filter(gloss_mask.astype(float), sigma=0.2) * 0.4
     result += np.dstack([gloss] * 3)
@@ -177,59 +168,59 @@ def apply_pen_effect_gel(digit_image, color=None):
     return np.clip(result * 255, 0, 255).astype(np.uint8)
 
 def apply_pen_effect_fountain(digit_image, color=None):
-    """Эффект перьевой ручки - характерные утолщения и растекания"""
+    """Fountain pen effect - characteristic thickening and spreading"""
     if color is None:
-        color = np.array([180, 30, 40]) / 255.0  # Дефолтный цвет
+        color = np.array([180, 30, 40]) / 255.0  # Default color
     else:
         color = color / 255.0 if color.max() > 1 else color
         
     digit_mask = (digit_image == 0).astype(np.float32)
     
-    # Базовая линия с небольшим размытием
+    # Base line with slight blur
     digit_mask = gaussian_filter(digit_mask, sigma=0.3)
     
-    # Создаем эффект неравномерного нажима
+    # Create uneven pressure effect
     pressure = np.random.randn(*digit_mask.shape) * 0.15 + 1.0
     pressure = gaussian_filter(pressure, sigma=1.5)
     digit_mask *= pressure
     
-    # Добавляем характерные утолщения в местах изменения направления
+    # Add characteristic thickening in places where direction changes
     gradient_x = gaussian_filter(digit_mask, sigma=1.0, order=[1,0])
     gradient_y = gaussian_filter(digit_mask, sigma=1.0, order=[0,1])
     gradient_mag = np.sqrt(gradient_x**2 + gradient_y**2)
     
-    # Усиливаем эффект в местах с большим градиентом
+    # Strengthen effect in places with a large gradient
     thickening = gradient_mag * 0.5
     thickening = gaussian_filter(thickening, sigma=0.5)
     digit_mask = np.maximum(digit_mask, thickening)
     
-    # Эффект растекания чернил
+    # Ink spreading effect
     ink_spread = gaussian_filter(digit_mask, sigma=0.7)
     digit_mask = np.maximum(digit_mask, ink_spread * 0.3)
     
-    # Создаем градиентную маску краев с учетом растекания
+    # Create edge gradient mask considering spreading
     edge_mask1 = gaussian_filter(digit_mask, sigma=0.5)
     edge_mask2 = gaussian_filter(digit_mask, sigma=1.2)
     edge_mask3 = gaussian_filter(digit_mask, sigma=2.5)
     
-    # Комбинируем маски для создания градиентного перехода
+    # Combine masks to create a gradient transition
     edge_gradient = (edge_mask1 - edge_mask2) * 0.5 + (edge_mask2 - edge_mask3) * 0.5
-    edge_gradient = np.clip(edge_gradient * 3.0, 0, 1)  # Усиливаем эффект
+    edge_gradient = np.clip(edge_gradient * 3.0, 0, 1)  # Strengthen effect
     
-    # Добавляем случайные вариации в прозрачность для имитации неравномерного растекания
+    # Add random variations to transparency for uneven spreading simulation
     variation = gaussian_filter(np.random.randn(*digit_mask.shape) * 0.1, sigma=1.0)
     edge_gradient += variation * (edge_gradient > 0.2)
     edge_gradient = np.clip(edge_gradient, 0, 1)
     
-    # Применяем градиентную прозрачность с учетом растекания
+    # Apply gradient transparency considering spreading
     alpha = digit_mask * (1.0 - edge_gradient)
     alpha = np.clip(alpha, 0, 1)
     
-    # Усиливаем контраст в центре для более насыщенного эффекта
+    # Further enhance contrast in the center for a more saturated effect
     alpha = np.where(alpha > 0.5, alpha * 1.4, alpha * 0.6)
     alpha = np.clip(alpha, 0, 1)
     
-    # Финальное сглаживание
+    # Final smoothing
     alpha = gaussian_filter(alpha, sigma=0.2)
     
     result = np.ones((*digit_mask.shape, 3), dtype=np.float32)
@@ -239,52 +230,52 @@ def apply_pen_effect_fountain(digit_image, color=None):
     return (result * 255).astype(np.uint8)
 
 def apply_pen_effect_ballpoint(digit_image, color=None):
-    """Эффект шариковой ручки - прерывистые линии с характерными пробелами"""
+    """Ballpoint pen effect - intermittent lines with characteristic gaps"""
     if color is None:
-        color = np.array([210, 35, 15]) / 255.0  # Дефолтный цвет
+        color = np.array([210, 35, 15]) / 255.0  # Default color
     else:
         color = color / 255.0 if color.max() > 1 else color
         
     digit_mask = (digit_image == 0).astype(np.float32)
     
-    # Базовая тонкая линия
+    # Base thin line
     digit_mask = gaussian_filter(digit_mask, sigma=0.2)
     digit_mask = np.power(digit_mask, 1.8)
     
-    # Создаем эффект неравномерного нажима
+    # Create uneven pressure effect
     pressure = np.random.randn(*digit_mask.shape) * 0.1 + 0.9
     pressure = gaussian_filter(pressure, sigma=1.0)
     digit_mask *= pressure
     
-    # Добавляем микротекстуру вместо полос
+    # Add microtexture instead of stripes
     texture = np.random.randn(*digit_mask.shape) * 0.15
     texture = gaussian_filter(texture, sigma=0.3)
     digit_mask *= (1.0 + texture * (digit_mask > 0.1))
     
-    # Небольшие случайные пропуски
+    # Small random gaps
     gaps = np.random.rand(*digit_mask.shape) > 0.98
     gaps = gaussian_filter(gaps.astype(float), sigma=0.2) * 0.3
     digit_mask *= (1.0 - gaps)
     
-    # Создаем градиентную маску краев с резкими переходами
+    # Create edge gradient mask with sharp transitions
     edge_mask1 = gaussian_filter(digit_mask, sigma=0.3)
     edge_mask2 = gaussian_filter(digit_mask, sigma=0.8)
     edge_mask3 = gaussian_filter(digit_mask, sigma=1.5)
     
-    # Комбинируем маски для создания градиентного перехода с акцентом на резкость
+    # Combine masks to create a gradient transition with emphasis on sharpness
     edge_gradient = (edge_mask1 - edge_mask2) * 0.8 + (edge_mask2 - edge_mask3) * 0.2
-    edge_gradient = np.clip(edge_gradient * 2.0, 0, 1)  # Сначала клипим значения
-    edge_gradient = np.power(np.maximum(edge_gradient, 0), 1.5)  # Затем применяем степень к неотрицательным значениям
+    edge_gradient = np.clip(edge_gradient * 2.0, 0, 1)  # First clip values
+    edge_gradient = np.power(np.maximum(edge_gradient, 0), 1.5)  # Then apply power to non-negative values
     
-    # Добавляем дополнительную текстуру к градиенту
+    # Add additional texture to the gradient
     edge_texture = gaussian_filter(np.random.randn(*digit_mask.shape) * 0.1, sigma=0.2)
     edge_gradient += edge_texture * (edge_gradient > 0.2)
     edge_gradient = np.clip(edge_gradient, 0, 1)
     
-    # Применяем градиентную прозрачность
+    # Apply gradient transparency
     alpha = digit_mask * (1.0 - edge_gradient)
     
-    # Усиливаем контраст для более четких линий
+    # Enhance contrast for sharper lines
     alpha = np.where(alpha > 0.4, alpha * 1.5, alpha * 0.5)
     alpha = np.clip(alpha, 0, 1)
     
@@ -292,13 +283,13 @@ def apply_pen_effect_ballpoint(digit_image, color=None):
     for i in range(3):
         result[:, :, i] = 1.0 - alpha * (1.0 - color[i])
     
-    # Убеждаемся, что все значения в допустимом диапазоне перед конвертацией
+    # Ensure all values are within a valid range before conversion
     result = np.clip(result * 255, 0, 255)
     return result.astype(np.uint8)
 
 def apply_pen_effect(digit_image, pressure_variation=True):
-    """Применяет случайный эффект ручки к изображению"""
-    # Список доступных эффектов
+    """Applies a random pen effect to an image"""
+    # List of available effects
     effects = [
         apply_pen_effect_classic_blue,
         apply_pen_effect_gel,
@@ -306,14 +297,52 @@ def apply_pen_effect(digit_image, pressure_variation=True):
         apply_pen_effect_ballpoint
     ]
     
-    # Выбираем случайный эффект
+    # Select a random effect
     effect_func = random.choice(effects)
     
-    # Генерируем случайный цвет
+    # Generate a random color
     color = generate_random_color()
     
-    # Применяем эффект
+    # Apply the effect
     return effect_func(digit_image, color)
+
+class RealDigitSelector:
+    """Class for working with real digit images"""
+    def __init__(self, dataset_path):
+        self.dataset_path = Path(dataset_path)
+        self.digit_paths = defaultdict(list)
+        self.load_digit_paths()
+    
+    def load_digit_paths(self):
+        """Loads paths to digit images"""
+        for digit_dir in self.dataset_path.glob("[0-9]"):
+            digit = int(digit_dir.name)
+            for img_path in digit_dir.glob("*.png"):
+                self.digit_paths[digit].append(img_path)
+    
+    def get_digit(self, class_id=None):
+        """Returns a random image of the specified digit"""
+        if class_id is None:
+            class_id = random.randint(0, 9)
+        
+        if class_id in self.digit_paths and self.digit_paths[class_id]:
+            # Select a random path to the image
+            img_path = random.choice(self.digit_paths[class_id])
+            
+            # Load the image
+            img = cv2.imread(str(img_path), cv2.IMREAD_UNCHANGED)
+            if img is not None and img.shape[2] == 4:
+                # Separate color channels and alpha channel
+                bgr = img[:, :, :3]
+                alpha = img[:, :, 3]
+                mask = alpha > 0
+
+                result = bgr.copy()
+                result[~mask] = [255, 255, 255]
+                
+                return result, class_id
+        
+        raise ValueError(f"No images found for digit {class_id}")
 
 class TouchingDigitsLoader:
     def __init__(self, dataset_path):
@@ -322,10 +351,10 @@ class TouchingDigitsLoader:
         self.labels = []
         self.usage_count = defaultdict(int)
         
-        # Загружаем все числа из датасета
-        print("Загрузка чисел из SyntheticDigitStrings...")
+        # Load all numbers from the dataset
+        print("Loading numbers from SyntheticDigitStrings...")
         number_dirs = list(self.dataset_path.iterdir())
-        for number_dir in tqdm(number_dirs, desc="Загрузка директорий"):
+        for number_dir in tqdm(number_dirs, desc="Loading directories"):
             if not number_dir.is_dir():
                 continue
                 
@@ -334,14 +363,14 @@ class TouchingDigitsLoader:
             if not txt_files:
                 continue
                 
-            # Берем только один файл из каждой директории для ускорения
+            # Take only one file from each directory for faster loading
             txt_file = random.choice(txt_files)
             with open(txt_file, 'r') as f:
                 lines = f.readlines()
-                if len(lines) < 2:  # Пропускаем файлы без разметки
+                if len(lines) < 2:  # Skip files without annotation
                     continue
                 
-                # Получаем изображение
+                # Get the image
                 img_path = txt_file.with_suffix('.png')
                 if not img_path.exists():
                     continue
@@ -350,30 +379,30 @@ class TouchingDigitsLoader:
                 if img is None:
                     continue
                 
-                # Преобразуем изображение в оттенки серого
+                # Convert image to grayscale
                 if len(img.shape) == 3:
                     if img.shape[2] == 4:  # RGBA
-                        # Используем RGB каналы для получения изображения в оттенках серого
+                        # Use RGB channels to get grayscale image
                         rgb = img[:, :, :3]
                         digit = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
                     else:  # RGB
                         digit = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                else:  # Уже в оттенках серого
+                else:  # Already grayscale
                     digit = img
                 
-                # Нормализуем значения и убеждаемся, что цифры черные (0) на белом фоне (255)
+                # Normalize values and ensure digits are black (0) on white (255) background
                 digit = cv2.normalize(digit, None, 0, 255, cv2.NORM_MINMAX)
                 
-                # Если цифры светлые на темном фоне, инвертируем
+                # If digits are light on dark background, invert
                 if np.mean(digit[digit > 127]) < np.mean(digit[digit <= 127]):
                     digit = cv2.bitwise_not(digit)
                 
-                # Улучшаем контраст
+                # Improve contrast
                 digit = cv2.threshold(digit, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
                 
-                # Парсим разметку
+                # Parse annotation
                 boxes = []
-                for line in lines[2:]:  # Пропускаем первые две строки
+                for line in lines[2:]:  # Skip first two lines
                     parts = line.strip().split('|')
                     if len(parts) != 4:
                         continue
@@ -387,18 +416,18 @@ class TouchingDigitsLoader:
         if not self.numbers:
             raise ValueError(f"No numbers found in {dataset_path}")
         
-        print(f"Загружено {len(self.numbers)} чисел из SyntheticDigitStrings")
+        print(f"Loaded {len(self.numbers)} numbers from SyntheticDigitStrings")
     
     def get_number(self):
-        """Получить случайное число из датасета"""
+        """Get a random number from the dataset"""
         if not self.numbers:
             return None
             
-        # Выбираем число, которое использовалось меньше всего
+        # Select the number that was used the least
         idx = min(range(len(self.numbers)), key=lambda x: self.usage_count[x])
         self.usage_count[idx] += 1
         
-        # Сбрасываем счетчики, если все числа использовались слишком много раз
+        # Reset counters if all numbers have been used too many times
         if min(self.usage_count.values()) > 20:
             self.usage_count.clear()
             
@@ -406,49 +435,49 @@ class TouchingDigitsLoader:
 
 class LetterNoiseLoader:
     def __init__(self, letters_path):
-        """Загружает буквы для использования в качестве шума"""
+        """Loads letters for use as noise"""
         self.letters_path = Path(letters_path)
         self.letters = []
         self.letter_classes = []
         
-        # Создаем список допустимых папок (буквы a-z и A-Z)
+        # Create a list of valid folders (letters a-z and A-Z)
         valid_folders = []
         for folder in self.letters_path.iterdir():
             if folder.is_dir() and len(folder.name) == 1:
-                if folder.name.isalpha():  # Только буквы
+                if folder.name.isalpha():  # Only letters
                     valid_folders.append(folder.name)
         
-        print(f"Найдено {len(valid_folders)} папок с буквами: {sorted(valid_folders)}")
+        print(f"Found {len(valid_folders)} folders with letters: {sorted(valid_folders)}")
         
-        # Загружаем изображения букв
+        # Load letter images
         for folder_name in valid_folders:
             folder_path = self.letters_path / folder_name
             for img_file in folder_path.glob("*.png"):
                 try:
-                    # Загружаем изображение с альфа-каналом
+                    # Load image with alpha channel
                     img = cv2.imread(str(img_file), cv2.IMREAD_UNCHANGED)
                     if img is not None:
-                        # Если изображение имеет альфа-канал (4 канала)
+                        # If image has alpha channel (4 channels)
                         if img.shape[-1] == 4:
-                            # Берем только альфа-канал
+                            # Take only alpha channel
                             alpha = img[:, :, 3]
-                            # Создаем белое изображение
+                            # Create a white image
                             letter = np.ones_like(alpha) * 255
-                            # Где альфа > 0, там ставим 0 (черный)
+                            # Where alpha > 0, put 0 (black)
                             letter[alpha > 0] = 0
                         else:
-                            # Если нет альфа-канала, используем как есть
+                            # If no alpha channel, use as is
                             letter = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                         
                         self.letters.append(letter)
                         self.letter_classes.append(folder_name)
                 except Exception as e:
-                    print(f"Ошибка при загрузке {img_file}: {e}")
+                    print(f"Error loading {img_file}: {e}")
         
-        print(f"Загружено {len(self.letters)} букв для шума")
+        print(f"Loaded {len(self.letters)} letters for noise")
     
     def get_random_letter(self):
-        """Возвращает случайную букву"""
+        """Returns a random letter"""
         if not self.letters:
             return None, None
         idx = random.randint(0, len(self.letters) - 1)
@@ -477,30 +506,30 @@ def is_valid_overlap(box1, box2, max_iou=0.15):
     return iou < max_iou
 
 def check_alignment(boxes, tolerance=5):
-    """Проверяет, что все цифры находятся на одной линии"""
+    """Checks if all digits are on the same line"""
     if not boxes:
         return True
-    # Берем среднюю линию каждого bounding box
+    # Take the middle line of each bounding box
     mid_lines = [(box[1] + box[3]) / 2 for box in boxes]
-    # Проверяем, что все средние линии находятся в пределах tolerance от первой
+    # Check if all middle lines are within tolerance of the first one
     reference = mid_lines[0]
     return all(abs(mid - reference) <= tolerance for mid in mid_lines)
 
 def draw_pen_line(image, start_point, end_point, color, thickness=2):
-    """Рисует линию в стиле ручки с неравномерностями и эффектами"""
-    # Создаем пустое изображение для линии
+    """Draws a line in pen style with irregularities and effects"""
+    # Create an empty image for the line
     line_image = np.ones_like(image) * 255
     
-    # Рисуем базовую линию
+    # Draw the base line
     cv2.line(line_image, start_point, end_point, (0, 0, 0), thickness)
     
-    # Конвертируем в оттенки серого
+    # Convert to grayscale
     if len(line_image.shape) == 3:
         line_gray = cv2.cvtColor(line_image, cv2.COLOR_BGR2GRAY)
     else:
         line_gray = line_image
     
-    # Применяем эффект ручки
+    # Apply pen effect
     return apply_pen_effect_fountain(line_gray, color)
 
 def add_noise_and_lines(image, boxes, probability=1.0):
@@ -532,12 +561,12 @@ def add_noise_and_lines(image, boxes, probability=1.0):
                     y = y_pos + random.randint(-2, 2)
                     points.append((int(x), int(y)))
                 
-                # Генерируем случайный цвет для линии
+                # Generate a random color for the line
                 color = generate_random_color() * 255
                 
-                # Рисуем сегменты линии
+                # Draw line segments
                 for i in range(len(points) - 1):
-                    # Получаем сегмент линии в стиле ручки
+                    # Get line segment in pen style
                     line_segment = draw_pen_line(
                         noise_layer, 
                         points[i], 
@@ -546,7 +575,7 @@ def add_noise_and_lines(image, boxes, probability=1.0):
                         thickness=random.randint(1, 2)
                     )
                     
-                    # Определяем область для вставки сегмента
+                    # Define area for insertion
                     x1, y1 = points[i]
                     x2, y2 = points[i + 1]
                     min_x = max(0, min(x1, x2) - 5)
@@ -554,21 +583,21 @@ def add_noise_and_lines(image, boxes, probability=1.0):
                     min_y = max(0, min(y1, y2) - 5)
                     max_y = min(image.shape[0], max(y1, y2) + 5)
                     
-                    # Создаем маску для текущего сегмента
+                    # Create mask for the current segment
                     segment_mask = np.mean(line_segment[min_y:max_y, min_x:max_x], axis=2) < 250
                     segment_mask = segment_mask.astype(np.float32)
                     
-                    # Накладываем сегмент на noise_layer
+                    # Apply segment to noise_layer
                     noise_layer[min_y:max_y, min_x:max_x] = (
                         noise_layer[min_y:max_y, min_x:max_x] * (1 - segment_mask[:, :, np.newaxis]) +
                         line_segment[min_y:max_y, min_x:max_x] * segment_mask[:, :, np.newaxis]
                     )
     
-    # Добавляем линии на изображение
+    # Add lines to the image
     mask = np.any(noise_layer > 0, axis=2).astype(np.float32)
     mask = mask[:, :, np.newaxis]
     mask = np.repeat(mask, 3, axis=2)
-    # Немного уменьшаем интенсивность линий
+    # Slightly reduce line intensity
     noise_layer = noise_layer * 0.9
     image = image * (1 - mask) + noise_layer * mask
     
@@ -621,29 +650,29 @@ class DigitSelector:
             for img_name in os.listdir(digit_dir):
                 if img_name.endswith(('.png', '.jpg', '.jpeg')):
                     img_path = os.path.join(digit_dir, img_name)
-                    # Загружаем изображение с альфа-каналом
+                    # Load image with alpha channel
                     img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
                     if img is not None:
-                        # Если изображение имеет альфа-канал (4 канала)
+                        # If image has alpha channel (4 channels)
                         if len(img.shape) == 3 and img.shape[2] == 4:
-                            # Создаем маску из альфа-канала
+                            # Create mask from alpha channel
                             alpha = img[:, :, 3]
-                            # Нормализуем альфа-канал
+                            # Normalize alpha channel
                             alpha = cv2.normalize(alpha, None, 0, 255, cv2.NORM_MINMAX)
-                            # Инвертируем маску (черные цифры на белом фоне)
+                            # Invert mask (black digits on white background)
                             digit = cv2.bitwise_not(alpha)
                         else:
-                            # Если нет альфа-канала, преобразуем в оттенки серого
+                            # If no alpha channel, convert to grayscale
                             digit = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                            # Инвертируем если нужно (предполагаем, что цифры светлые на темном фоне)
+                            # Invert if needed (assuming digits are light on dark background)
                             if np.mean(digit) > 127:
                                 digit = cv2.bitwise_not(digit)
                         
-                        # Убеждаемся, что цифры черные на белом фоне
+                        # Ensure digits are black on white background
                         if np.mean(digit[digit > 0]) < 127:
                             digit = cv2.bitwise_not(digit)
                         
-                        # Нормализуем значения
+                        # Normalize values
                         digit = cv2.normalize(digit, None, 0, 255, cv2.NORM_MINMAX)
                         
                         self.digits.append(digit)
@@ -666,7 +695,7 @@ class DigitSelector:
                     self.usage_count[idx] = 0
                 available_indices = self.class_indices[class_id]
         else:
-            # Выбираем случайный класс цифры
+            # Select a random digit class
             available_classes = list(range(10))
             random.shuffle(available_classes)
             for class_id in available_classes:
@@ -686,19 +715,19 @@ class DigitSelector:
         return self.digits[idx], self.labels[idx]
 
 def add_letter_noise(image, letter_loader, boxes, num_letters=10, probability=0.9):
-    """Добавляет буквенные шумы на изображение того же размера, что и цифры"""
+    """Adds letter noise to an image of the same size as digits"""
     if random.random() > probability or not letter_loader:
         return image
     
-    # Определяем количество букв для добавления
-    num_to_add = random.randint(num_letters, num_letters + 10)  # 10-20 букв
+    # Determine the number of letters to add
+    num_to_add = random.randint(num_letters, num_letters + 10)  # 10-20 letters
     
-    # Получаем размеры изображения
+    # Get image dimensions
     h, w = image.shape[:2]
     
-    # Определяем размер букв на основе размера цифр
+    # Determine letter size based on digit size
     if boxes:
-        # Вычисляем средний размер цифр
+        # Calculate average digit size
         digit_heights = []
         for box in boxes:
             digit_height = box[3] - box[1]  # y2 - y1
@@ -706,73 +735,77 @@ def add_letter_noise(image, letter_loader, boxes, num_letters=10, probability=0.
         
         if digit_heights:
             avg_digit_height = sum(digit_heights) / len(digit_heights)
-            letter_height = int(avg_digit_height * 1.2)  # Буквы на 20% больше цифр
+            letter_height = int(avg_digit_height * 1.2)  # Letters are 20% larger than digits
         else:
-            letter_height = int(h * 0.12)  # Fallback размер
+            letter_height = int(h * 0.12)  # Fallback size
     else:
-        letter_height = int(h * 0.12)  # Fallback размер
+        letter_height = int(h * 0.12)  # Fallback size
     
-    # Определяем несколько возможных горизонталей для букв
+    # Determine several possible horizontal lines for letters
     possible_lines = []
     if boxes:
         min_y = min(box[1] for box in boxes)
         max_y = max(box[3] for box in boxes)
         h_step = int(letter_height * 1.1)
-        # Строка над цифрами
+        # Line above digits
         if min_y - h_step >= 0:
             possible_lines.append(max(0, min_y - h_step))
-        # Строка с цифрами (основная)
+        # Line with digits (main)
         possible_lines.append(min_y)
-        # Строка под цифрами
+        # Line below digits
         if max_y + h_step < h:
             possible_lines.append(min(h - letter_height, max_y + h_step))
-        # Если места много, добавим ещё одну строку выше и ниже
+        # If there's plenty of space, add another line above and below
         if min_y - 2 * h_step >= 0:
             possible_lines.append(max(0, min_y - 2 * h_step))
         if max_y + 2 * h_step < h:
             possible_lines.append(min(h - letter_height, max_y + 2 * h_step))
     else:
-        # Если нет цифр, размещаем в центре
+        # If no digits, place in the center
         possible_lines = [int((h - letter_height) // 2)]
     
-    # Создаем список уже занятых областей для избежания перекрытий
+    # Create a list of already occupied areas to avoid overlaps
     occupied_areas = []
     added_count = 0
     
     for _ in range(num_to_add):
-        # Получаем случайную букву
+        # Get a random letter
         letter_img, letter_class = letter_loader.get_random_letter()
         if letter_img is None:
             continue
+
+        # Calculate letter width while maintaining proportions
+        aspect_ratio = letter_img.shape[1] / letter_img.shape[0]
+        width = int(letter_height * aspect_ratio)
+
+        letter_img = cv2.resize(letter_img, (width, letter_height))
         
-        # Применяем эффект ручки к букве
+        # Apply pen effect to the letter
         colored_letter = apply_pen_effect(letter_img)
         
-        # Создаем маску из цветного изображения
+        # Create mask from the colored image
         letter_mask = np.mean(colored_letter, axis=2) < 250
         letter_mask = letter_mask.astype(np.float32)
         
-        # Вычисляем ширину буквы с сохранением пропорций
-        aspect_ratio = letter_img.shape[1] / letter_img.shape[0]
-        width = int(letter_height * aspect_ratio)
+        # Change letter size and mask
+        # resized_letter = cv2.resize(colored_letter, (width, letter_height))
+        # resized_mask = cv2.resize(letter_mask, (width, letter_height))
+        resized_letter = colored_letter
+        resized_mask = letter_mask
         
-        # Изменяем размер буквы и маски
-        resized_letter = cv2.resize(colored_letter, (width, letter_height))
-        resized_mask = cv2.resize(letter_mask, (width, letter_height))
-        
-        # Размещаем букву в выбранной области
+        # Place the letter in the selected area
         max_attempts = 50
         for attempt in range(max_attempts):
-            # Случайная позиция в выбранном диапазоне
+            # Random position in the selected range
             x = random.randint(0, w - width)
-            # Выбираем случайную строку для размещения буквы
+            # Select a random line for letter placement
             letter_y = random.choice(possible_lines)
             
-            # Проверяем границы
+            # Check boundaries
             if x < 0 or x + width > w or letter_y < 0 or letter_y + letter_height > h:
                 continue
             
-            # Проверяем перекрытие с цифрами
+            # Check for overlap with digits
             letter_area = [x, letter_y, x + width, letter_y + letter_height]
             overlap_with_digits = False
             
@@ -785,7 +818,7 @@ def add_letter_noise(image, letter_loader, boxes, num_letters=10, probability=0.
             if overlap_with_digits:
                 continue
             
-            # Проверяем перекрытие с уже размещенными буквами
+            # Check for overlap with already placed letters
             overlap_with_letters = False
             for area in occupied_areas:
                 if not (letter_area[2] < area[0] or letter_area[0] > area[2] or 
@@ -794,14 +827,14 @@ def add_letter_noise(image, letter_loader, boxes, num_letters=10, probability=0.
                     break
             
             if not overlap_with_letters:
-                # Размещаем букву
+                # Place the letter
                 roi = image[letter_y:letter_y + letter_height, x:x + width]
-                # Расширяем маску до 3 каналов
+                # Expand mask to 3 channels
                 mask = np.dstack([resized_mask] * 3)
-                # Смешиваем с фоном
+                # Blend with background
                 roi[:] = roi * (1 - mask) + resized_letter * mask
                 
-                # Добавляем область в список занятых
+                # Add area to occupied list
                 occupied_areas.append(letter_area)
                 added_count += 1
                 break
@@ -810,43 +843,46 @@ def add_letter_noise(image, letter_loader, boxes, num_letters=10, probability=0.
 
 def apply_high_quality_resize(digit_image, target_height, max_rotation=5):
     """
-    Применяет высококачественное масштабирование к изображению цифры с случайными искажениями
+    Applies high-quality scaling to a digit image with random distortions
     """
-    # Определяем размеры с сохранением пропорций
+    # Determine dimensions while maintaining proportions
     aspect_ratio = digit_image.shape[1] / digit_image.shape[0]
     target_width = int(target_height * aspect_ratio)
     
-    # Добавляем отступы для поворота
+    # Add padding for rotation
     padding = int(target_height * 0.2)
     padded_height = target_height + 2 * padding
     padded_width = target_width + 2 * padding
     
-    # Выбираем метод интерполяции в зависимости от типа масштабирования
+    # Select interpolation method based on scaling type
     scale_factor = target_height / digit_image.shape[0]
     if scale_factor > 1:
-        interpolation = cv2.INTER_CUBIC  # Лучше для увеличения
+        interpolation = cv2.INTER_CUBIC  # Better for enlargement
     else:
-        interpolation = cv2.INTER_AREA   # Лучше для уменьшения
+        interpolation = cv2.INTER_AREA   # Better for reduction
     
-    # Масштабируем изображение
+    # Scale the image
     resized = cv2.resize(digit_image, (target_width, target_height), interpolation=interpolation)
     
-    # Создаем изображение с отступами
+    # Create an image with padding
     padded = np.ones((padded_height, padded_width), dtype=np.uint8) * 255
     padded[padding:padding+target_height, padding:padding+target_width] = resized
     
-    # Применяем случайный поворот
-    angle = np.random.uniform(-max_rotation, max_rotation)
-    rotation_matrix = cv2.getRotationMatrix2D(
-        (padded_width/2, padded_height/2), angle, 1.0)
-    rotated = cv2.warpAffine(padded, rotation_matrix, (padded_width, padded_height),
-                            flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT,
-                            borderValue=255)
+    # With 60% probability, apply a slight right tilt of 2-7 degrees
+    if random.random() < 0.8:
+        angle = random.uniform(8, 28)  # Positive angle for right tilt
+        rotation_matrix = cv2.getRotationMatrix2D(
+            (padded_width/2, padded_height/2), -angle, 1.0)  # Negative angle for right tilt
+        rotated = cv2.warpAffine(padded, rotation_matrix, (padded_width, padded_height),
+                                flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT,
+                                borderValue=[255])
+    else:
+        rotated = padded
     
-    # Добавляем легкое перспективное искажение
-    if random.random() < 0.3:  # 30% шанс
+    # Add a slight perspective distortion
+    if random.random() < 0.3:  # 30% chance
         height, width = rotated.shape
-        # Создаем точки в правильном формате для OpenCV
+        # Create points in the correct format for OpenCV
         src_points = np.array([
             [0, 0],
             [width-1, 0],
@@ -854,42 +890,42 @@ def apply_high_quality_resize(digit_image, target_height, max_rotation=5):
             [width-1, height-1]
         ], dtype=np.float32)
         
-        # Небольшие случайные смещения углов
+        # Small random shifts of corners
         max_shift = width * 0.05
         dst_points = src_points + np.random.uniform(-max_shift, max_shift, src_points.shape).astype(np.float32)
         
-        # Применяем перспективное преобразование
+        # Apply perspective transformation
         transform_matrix = cv2.getPerspectiveTransform(src_points, dst_points)
         warped = cv2.warpPerspective(rotated, transform_matrix, (width, height),
                                    flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT,
-                                   borderValue=255)
+                                   borderValue=[255])
     else:
         warped = rotated
     
-    # Обрезаем отступы, находя границы цифры
+    # Crop padding, finding the boundaries of the digit
     coords = cv2.findNonZero(255 - warped)
     if coords is not None:
         x, y, w, h = cv2.boundingRect(coords)
         cropped = warped[y:y+h, x:x+w]
         
-        # Масштабируем до целевой высоты
+        # Scale to target height
         final_width = int(target_height * (cropped.shape[1] / cropped.shape[0]))
         final = cv2.resize(cropped, (final_width, target_height), interpolation=cv2.INTER_CUBIC)
     else:
         final = cv2.resize(warped, (target_width, target_height), interpolation=cv2.INTER_CUBIC)
     
-    # Применяем легкое размытие для устранения артефактов
+    # Apply a slight blur to remove artifacts
     final = cv2.GaussianBlur(final, (3, 3), 0.5)
     
     return final
 
 def apply_color_to_digit(digit_image, color):
     """
-    Применяет случайный эффект ручки к изображению
-    digit_image: изображение в оттенках серого, где цифры черные (0) на белом фоне (255)
-    color: BGR цвет в формате [B, G, R], каждый канал от 0 до 255
+    Applies a random pen effect to an image
+    digit_image: grayscale image where digits are black (0) on white (255) background
+    color: BGR color in format [B, G, R], each channel from 0 to 255
     """
-    # Выбираем случайный эффект
+    # Select a random effect
     effects = [
         apply_pen_effect_classic_blue,
         apply_pen_effect_gel,
@@ -898,98 +934,205 @@ def apply_color_to_digit(digit_image, color):
     ]
     effect_func = random.choice(effects)
 
-    resized_digit = cv2.resize(digit_image, None, fx=4, fy=4, interpolation=cv2.INTER_LANCZOS4)
-    _, resized_digit = cv2.threshold(resized_digit, 128, 255, cv2.THRESH_BINARY)
-    res = effect_func(resized_digit, color)
-    # cv2.imwrite('digit_image.png', res)
-    res = cv2.resize(res, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA)
-    # cv2.imwrite('digit_image.png', res)
+    _, gray_image = cv2.threshold(digit_image, 128, 255, cv2.THRESH_BINARY)
     
-    # Применяем эффект
-    return res
+    # Apply the effect
+    return effect_func(gray_image, color)
 
-def generate_multi_digit_image(digit_selector, touching_loader, target_size=416, min_digits=5, max_digits=10, max_attempts=50):
-    """Генерирует изображение с цифрами и их масками"""
+def generate_quotation_mark(height, is_opening=True, is_double=False):
+    """Generates an image of a quotation mark of a given height
+    
+    Args:
+        height: image height
+        is_opening: True for opening quotation mark, False for closing
+        is_double: True for double quotes, False for single quotes
+    """
+    # Create an empty image with a slight width buffer
+    width = int(height * 0.3)  # Width is approximately 30% of height
+    if is_double:
+        width = int(width * 1.6)  # Increase width for double quotes
+    image = np.ones((height, width), dtype=np.uint8) * 255
+    
+    # Define base parameters for lines
+    line_height = int(height * 0.3)  # Height of each line
+    tilt_angle = 15  # Tilt angle in degrees
+    dx = int(line_height * np.tan(np.radians(tilt_angle)))  # X shift due to tilt
+    
+    # Define line positions
+    if is_opening:
+        # Opening quotation mark
+        x_base = int(width * (0.7 if not is_double else 0.8))
+        x_offset = int(width * 0.15)  # Distance between lines
+    else:
+        # Closing quotation mark
+        x_base = int(width * (0.3 if not is_double else 0.2))
+        x_offset = int(width * 0.15)  # Distance between lines
+    
+    # Calculate coordinates for the first line
+    y_top1 = int(height * 0.3)
+    y_bottom1 = y_top1 + line_height
+    
+    # Calculate coordinates for the second line
+    y_top2 = y_top1
+    y_bottom2 = y_bottom1
+    
+    # Draw lines considering tilt
+    if is_opening:
+        # For opening quotation mark, lines go from right to left
+        cv2.line(image, (x_base, y_top1), (x_base - dx, y_bottom1), (0, 0, 0), thickness=2)
+        cv2.line(image, (x_base - x_offset, y_top2), (x_base - x_offset - dx, y_bottom2), (0, 0, 0), thickness=2)
+        
+        if is_double:
+            # Add a second pair of lines for double quotes
+            x_shift = int(width * 0.3)  # Shift for the second pair
+            cv2.line(image, (x_base - x_shift, y_top1), (x_base - dx - x_shift, y_bottom1), (0, 0, 0), thickness=2)
+            cv2.line(image, (x_base - x_offset - x_shift, y_top2), (x_base - x_offset - dx - x_shift, y_bottom2), (0, 0, 0), thickness=2)
+    else:
+        # For closing quotation mark, lines go from left to right
+        cv2.line(image, (x_base, y_top1), (x_base + dx, y_bottom1), (0, 0, 0), thickness=2)
+        cv2.line(image, (x_base + x_offset, y_top2), (x_base + x_offset + dx, y_bottom2), (0, 0, 0), thickness=2)
+        
+        if is_double:
+            # Add a second pair of lines for double quotes
+            x_shift = int(width * 0.3)  # Shift for the second pair
+            cv2.line(image, (x_base + x_shift, y_top1), (x_base + dx + x_shift, y_bottom1), (0, 0, 0), thickness=2)
+            cv2.line(image, (x_base + x_offset + x_shift, y_top2), (x_base + x_offset + dx + x_shift, y_bottom2), (0, 0, 0), thickness=2)
+    
+    return image
+
+def generate_multi_digit_image(digit_selector, touching_loader, real_loader, target_size=640, min_digits=5, max_digits=10, max_attempts=50):
+    """Generates an image with digits and their masks"""
     for attempt in range(max_attempts):
-        # Создаем фон как текстуру бумаги
+        # Create a background as paper texture
         image = create_paper_texture((target_size, target_size))
         
         boxes = []  # [x1, y1, x2, y2, class_id]
         masks = []  # [(mask, class_id), ...]
         base_height = int(target_size * 0.12)
+        num_digits = random.randint(min_digits, max_digits)
+        # Collect information about all digits
+        digit_info = []
+        total_width = 0
         
-        # Генерируем только из single digits
+        # Determine if quotes will be added (40% probability)
+        add_quotes = random.random() < 0.4
+        # Determine if quotes will be double (30% probability)
+        is_double_quotes = random.random() < 0.3 if add_quotes else False
+        quote_width = int(base_height * 0.3 * (1.6 if is_double_quotes else 1.0)) if add_quotes else 0
+        quote_spacing = int(base_height * 0.2) if add_quotes else 0
+        
+        # Generate only single digits
         if digit_selector is not None:
-            num_digits = random.randint(min_digits, max_digits)
-            
-            # Собираем информацию о всех цифрах
-            digit_info = []
-            total_width = 0
             for _ in range(num_digits):
-                digit, label = digit_selector.get_digit()
+                func = np.random.choice([digit_selector.get_digit, real_loader.get_digit])
+                digit, label = func()
                 aspect_ratio = digit.shape[1] / digit.shape[0]
                 width = int(base_height * aspect_ratio)
-                resized_digit = cv2.resize(digit, (width, base_height))
+                if func == real_loader.get_digit: width = int(width/2)
+                resized_digit = cv2.resize(digit, (width, base_height),
+                                          interpolation=cv2.INTER_LANCZOS4)
                 
-                # Применяем цвет к цифрам
-                color = generate_random_color() * 255
-                colored_digit = apply_color_to_digit(resized_digit, color)
+                if func == digit_selector.get_digit:
+                    # Apply color to digits
+                    color = generate_random_color() * 255
+                    colored_digit = apply_color_to_digit(resized_digit, color)
+                else:
+                    colored_digit = resized_digit
                 
-                # Создаем маску из цветного изображения
+                # Create mask from the colored image
                 digit_mask = np.mean(colored_digit, axis=2) < 250
                 digit_mask = digit_mask.astype(np.float32)
                 
                 digit_info.append((width, base_height, colored_digit, digit_mask, label))
                 total_width += width
             
-            # Базовый отступ между цифрами
+            # Base spacing between digits
             spacing = int(base_height * 0.1)
             total_width += spacing * (num_digits - 1)
+            
+            # Add quote width and spacing
+            if add_quotes:
+                total_width += 2 * quote_width + 2 * quote_spacing
             
             if total_width > target_size * 0.9:
                 continue
             
-            # Центрируем по горизонтали и вертикали
+            # Center horizontally and vertically
             start_x = (target_size - total_width) // 2
             start_y = (target_size - base_height) // 2
-            
-            # Размещаем цифры
             current_x = start_x
+            
+            # Add opening quote
+            if add_quotes:
+                # Generate opening quote
+                opening_quote = generate_quotation_mark(base_height, is_opening=True, is_double=is_double_quotes)
+                color = generate_random_color() * 255
+                colored_quote = apply_color_to_digit(opening_quote, color)
+                
+                # Ensure sizes match
+                roi = image[start_y:start_y + base_height, current_x:current_x + quote_width]
+                colored_quote_resized = cv2.resize(colored_quote, (quote_width, base_height))
+                quote_mask = np.mean(colored_quote_resized, axis=2) < 250
+                quote_mask = quote_mask.astype(np.float32)
+                
+                # Place opening quote
+                roi[:] = roi * (1 - quote_mask[:, :, np.newaxis]) + colored_quote_resized * quote_mask[:, :, np.newaxis]
+                current_x += quote_width + quote_spacing
+            
+            # Place digits
             for width, height, colored_digit, digit_mask, label in digit_info:
-                # Создаем полную маску для текущей цифры
+                # Create full mask for the current digit
                 full_mask = np.zeros((target_size, target_size), dtype=np.float32)
                 full_mask[start_y:start_y + height, current_x:current_x + width] = digit_mask
                 
-                # Размещаем цифру на изображении
+                # Place the digit on the image
                 roi = image[start_y:start_y + height, current_x:current_x + width]
                 roi[:] = roi * (1 - digit_mask[:, :, np.newaxis]) + colored_digit * digit_mask[:, :, np.newaxis]
                 
                 boxes.append([current_x, start_y, current_x + width, start_y + height, label])
                 masks.append((full_mask, label))
                 current_x += width + spacing
+            
+            # Add closing quote
+            if add_quotes:
+                current_x -= spacing  # Remove last spacing
+                current_x += quote_spacing
+                # Generate closing quote
+                closing_quote = generate_quotation_mark(base_height, is_opening=False, is_double=is_double_quotes)
+                color = generate_random_color() * 255
+                colored_quote = apply_color_to_digit(closing_quote, color)
+                
+                # Ensure sizes match
+                roi = image[start_y:start_y + base_height, current_x:current_x + quote_width]
+                colored_quote_resized = cv2.resize(colored_quote, (quote_width, base_height))
+                quote_mask = np.mean(colored_quote_resized, axis=2) < 250
+                quote_mask = quote_mask.astype(np.float32)
+                
+                # Place closing quote
+                roi[:] = roi * (1 - quote_mask[:, :, np.newaxis]) + colored_quote_resized * quote_mask[:, :, np.newaxis]
         
         if len(boxes) >= min_digits:
             return image, boxes, masks
     
-    print("Не удалось разместить все цифры корректно за несколько попыток")
+    print("Failed to place all digits correctly after multiple attempts")
     return image, boxes, []
 
 def convert_mask_to_yolo_segments(mask, image_width, image_height):
-    """Конвертирует маску в формат сегментации YOLO (список нормализованных координат контура)"""
-    # Находим контуры маски
+    """Converts mask to YOLO segmentation format (list of normalized contour coordinates)"""
+    # Find contours of the mask
     contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     if not contours:
         return None
     
-    # Берем самый большой контур
+    # Take the largest contour
     contour = max(contours, key=cv2.contourArea)
     
-    # Упрощаем контур для уменьшения количества точек
+    # Simplify the contour to reduce the number of points
     epsilon = 0.005 * cv2.arcLength(contour, True)
     contour = cv2.approxPolyDP(contour, epsilon, True)
     
-    # Преобразуем контур в нормализованные координаты
+    # Convert contour to normalized coordinates
     contour = contour.reshape(-1, 2)
     normalized_contour = contour.astype(np.float32)
     normalized_contour[:, 0] = normalized_contour[:, 0] / image_width
@@ -999,36 +1142,44 @@ def convert_mask_to_yolo_segments(mask, image_width, image_height):
 
 def main():
     # ============================================================================
-    # КОНФИГУРАЦИЯ ГЕНЕРАЦИИ ДАТАСЕТА
+    # CONFIGURATION FOR DATASET GENERATION
     # ============================================================================
     
-    # а) Использовать ли датасет Touching Digits
-    USE_TOUCHING_DIGITS = False  # Отключаем использование touching digits
+    SEGMENTATION = False
+    DETECTION = True
+
+    # a) Use Touching Digits dataset
+    USE_TOUCHING_DIGITS = False  # Disable using touching digits
     TOUCHING_DIGITS_PATH = "/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/Datasets/Touching-Digits/SyntheticDigitStrings"
     
-    # б) Использовать ли цифры для этого датасета (Single Digits)
+    # b) Use Single Digits for this dataset (Single Digits)
     USE_SINGLE_DIGITS = True
     SINGLE_DIGITS_PATH = "/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/Datasets/Single-Digits/dataset"
     
-    # в) Добавлять ли разметку для датасета с буквами (системно без разметки)
-    ADD_LETTER_ANNOTATIONS = False  # Буквы добавляются как шум без разметки
+    # c) Use real digits
+    USE_REAL_DIGITS = True
+    REAL_DIGITS_PATH = "/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/Datasets/Real-Digits/"
+
+    # d) Add annotations for the letter dataset (system-wise without annotation)
+    USE_LETTER_ANNOTATIONS = True  # Letters are added as noise without annotation
+    LETTERS_PATH = "/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/Datasets/Hnd-Letters/Img"
     
-    # г) Параметры эффекта ручки
-    PEN_PRESSURE_VARIATION = True  # Включить вариацию давления ручки
-    PAPER_TEXTURE_INTENSITY = 0.08  # Интенсивность текстуры бумаги (уменьшили)
+    # e) Pen effect parameters
+    PEN_PRESSURE_VARIATION = True  # Enable pen pressure variation
+    PAPER_TEXTURE_INTENSITY = 0.08  # Paper texture intensity (reduced)
     
     # ============================================================================
-    # ПАРАМЕТРЫ ГЕНЕРАЦИИ
+    # GENERATION PARAMETERS
     # ============================================================================
-    num_images = 100  # Количество генерируемых изображений
-    target_size = 416  # Размер изображения
-    min_digits = 5    # Минимальное количество цифр
-    max_digits = 10   # Максимальное количество цифр
+    num_images = 16000  # Number of generated images
+    target_size = 640  # Image size
+    min_digits = 5    # Minimum number of digits
+    max_digits = 10   # Maximum number of digits
     
     # ============================================================================
     
     # Create output directories
-    output_dir = Path("/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/yolo-dataset-v11")
+    output_dir = Path("/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/yolo-dataset-v12")
     images_dir = output_dir / "images"
     labels_dir = output_dir / "labels"
     
@@ -1040,9 +1191,9 @@ def main():
     if USE_SINGLE_DIGITS:
         try:
             digit_selector = DigitSelector(SINGLE_DIGITS_PATH)
-            print(f"Загрузчик одиночных цифр инициализирован: {SINGLE_DIGITS_PATH}")
+            print(f"Single digit loader initialized: {SINGLE_DIGITS_PATH}")
         except Exception as e:
-            print(f"Ошибка при инициализации загрузчика одиночных цифр: {e}")
+            print(f"Error initializing single digit loader: {e}")
             USE_SINGLE_DIGITS = False
     
     # Initialize touching digits loader
@@ -1050,32 +1201,43 @@ def main():
     if USE_TOUCHING_DIGITS:
         try:
             touching_loader = TouchingDigitsLoader(TOUCHING_DIGITS_PATH)
-            print(f"Загрузчик touching digits инициализирован: {TOUCHING_DIGITS_PATH}")
+            print(f"Touching digits loader initialized: {TOUCHING_DIGITS_PATH}")
         except Exception as e:
-            print(f"Ошибка при инициализации загрузчика touching digits: {e}")
+            print(f"Error initializing touching digits loader: {e}")
             USE_TOUCHING_DIGITS = False
+
+        # Initialize touching digits loader
+    real_loader = None
+    if USE_REAL_DIGITS:
+        try:
+            real_loader = RealDigitSelector(REAL_DIGITS_PATH)
+            print(f"Real digits loader initialized: {REAL_DIGITS_PATH}")
+        except Exception as e:
+            print(f"Error initializing real digits loader: {e}")
+            USE_REAL_DIGITS = False
     
     # Initialize letter noise loader
-    letters_path = "/home/optimus/Desktop/Work/EasyData/Hand-Written-Digits-Detection/Datasets/Hnd-Letters/Img"
-    try:
-        letter_loader = LetterNoiseLoader(letters_path)
-        print("Загрузчик буквенных шумов инициализирован успешно")
-    except Exception as e:
-        print(f"Ошибка при инициализации загрузчика букв: {e}")
-        letter_loader = None
+    letter_loader = None
+    if USE_LETTER_ANNOTATIONS:
+        try:
+            letter_loader = LetterNoiseLoader(LETTERS_PATH)
+            print("Letter noise loader initialized successfully")
+        except Exception as e:
+            print(f"Error initializing letter loader: {e}")
+            USE_LETTER_ANNOTATIONS = False
     
-    # Проверяем, что хотя бы один загрузчик цифр работает
+    # Check if at least one digit loader is working
     if not USE_SINGLE_DIGITS and not USE_TOUCHING_DIGITS:
-        raise ValueError("Необходимо включить хотя бы один источник цифр (USE_SINGLE_DIGITS или USE_TOUCHING_DIGITS)")
+        raise ValueError("At least one digit source (USE_SINGLE_DIGITS or USE_TOUCHING_DIGITS) must be enabled")
     
     # Generate images
     for i in tqdm(range(num_images)):
-        image, boxes, masks = generate_multi_digit_image(digit_selector, touching_loader, target_size, min_digits, max_digits)
+        image, boxes, masks = generate_multi_digit_image(digit_selector, touching_loader, real_loader, target_size, min_digits, max_digits)
         
-        # Добавляем шум и линии к изображению
+        # Add noise and lines to the image
         image = add_noise_and_lines(image, boxes)
         
-        # Добавляем буквенные шумы
+        # Add letter noise
         image = add_letter_noise(image, letter_loader, boxes)
         
         # Save image
@@ -1085,12 +1247,19 @@ def main():
         # Save labels in YOLO format with segmentation
         label_path = labels_dir / f"image_{i:04d}.txt"
         with open(label_path, 'w') as f:
-            for mask, class_id in masks:
-                # Конвертируем маску в формат сегментации YOLO
-                segments = convert_mask_to_yolo_segments(mask, image.shape[1], image.shape[0])
-                if segments:
-                    # Записываем в формате: class_id x1 y1 x2 y2 ... xn yn
-                    f.write(f"{class_id} {' '.join(map(str, segments))}\n")
+                if SEGMENTATION:
+                    for mask, class_id in masks:
+                        # Convert mask to YOLO segmentation format
+                        segments = convert_mask_to_yolo_segments(mask, image.shape[1], image.shape[0])
+                        if segments:
+                            # Write in format: class_id x1 y1 x2 y2 ... xn yn
+                            f.write(f"{class_id} {' '.join(map(str, segments))}\n")
+                if DETECTION:
+                    for box in boxes:
+                        x_min, y_min, x_max, y_max, class_id = box
+                        yolo_box = convert_to_yolo_format([x_min, y_min, x_max, y_max], 
+                                                        image.shape[1], image.shape[0])
+                        f.write(f"{class_id} {' '.join(map(str, yolo_box))}\n")
 
 if __name__ == "__main__":
     main()  
