@@ -19,22 +19,15 @@ During the development and training process, several issues were identified:
 
 Initially, the MNIST dataset was used to generate synthetic images for training. However, MNIST has significant limitations, as outlined in this article: [Why MNIST is the Worst Thing That Has Ever Happened to Humanity](https://matteo-a-barbieri.medium.com/why-mnist-is-the-worst-thing-that-has-ever-happened-to-humanity-49fd053f0f66). Below is an example of an MNIST-based image, highlighting its simplistic and unrealistic nature:
 
-![MNIST Example](examples/mnist.jpg)
+![MNIST Example](examples/mnist.png)
 
 To create a robust dataset for training, the following datasets were utilized:
 - **[Handwritten Digits Dataset (Not in MNIST)](https://www.kaggle.com/datasets/jcprogjava/handwritten-digits-dataset-not-in-mnist)**: A dataset of handwritten digits, available for download at [GitHub - Handwritten-Digit-Dataset v1.2.0](https://github.com/JC-ProgJava/Handwritten-Digit-Dataset/releases/tag/v1.2.0) in the `dataset.zip` file.
-
-![Single Digit Example](examples/NotInMnist.png)
-
 - **[Touching Digits Dataset](https://web.inf.ufpr.br/vri/databases/touching-digits/)**: A dataset containing handwritten digits that may overlap or touch, simulating complex detection scenarios.
-
-![Touching Digits Example](examples/TouchingDigits.png)
-
 - **[English Handwritten Characters Dataset](https://www.kaggle.com/datasets/dhruvildave/english-handwritten-characters-dataset?select=english.csv)**: A dataset of handwritten digits and letters, used to introduce realistic background noise and character variations.
-
-![English HandwrittenCharacters Example](examples/HandwrittenCharacters.png)
-
 - **Custom Handwritten Digits Dataset**: A proprietary dataset of handwritten digits, created to further diversify the training data and enhance model robustness.
+
+![Elements from above datasets](examples/datasets.png)
 
 ### Dataset Generation
 
@@ -42,7 +35,7 @@ A dataset of 16,000 images was created by combining the above datasets, includin
 
 The example of dataset frame:
 
-![Dataset Image Example](examples/dataset.jpg)
+![Dataset Image Example](examples/example.png)
 
 #### Initial Binary Dataset
 
@@ -57,7 +50,7 @@ To address the limitations of the binary dataset, I transitioned to a color data
 
 Below is an example of an image from the color dataset, showcasing the paper-like background and digits/letters rendered to imitate pen writing:
 
-![Pen Imitation Example](examples/pen_imitation.jpg)
+![Pen Imitation Example](examples/pen_imitation.png)
 
 ### Model Development
 
@@ -92,5 +85,5 @@ The updated color dataset, now incorporating digits from the custom handwritten 
 - Reduce the dataset size (e.g., to 8,000–12,000 images) to mitigate overfitting and experiment with including more digits per image to improve detection robustness.
 - Refine the color dataset annotation process to create more precise and robust segmentation masks, addressing issues with thin mask edges.
 - Experiment with targeted augmentations (e.g., color jitter, subtle rotations) to enhance model generalization without degrading performance.
-- Address training instability in the segmentation model, potentially by adjusting learning rates, adding regularization, or using techniques like learning rate scheduling.
+- Make bigger test to find the other problems of my model.
 - Test alternative object detection and segmentation models (e.g., Faster R-CNN, SSD, or U-Net) to compare performance with the current YOLO-based approach.
